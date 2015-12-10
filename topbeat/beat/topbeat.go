@@ -210,6 +210,7 @@ func (t *Topbeat) exportProcStats() error {
 					"state": process.State,
 					"mem":   process.Mem,
 					"cpu":   process.Cpu,
+					"aa":    1,
 				},
 			}
 			t.events.PublishEvent(event)
