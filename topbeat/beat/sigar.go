@@ -51,14 +51,22 @@ type ProcCpuTime struct {
 	Start       string  `json:"start_time"`
 }
 
+type ProcConnections struct {
+	LocalIp    uint64 `json:"localip"`
+	LocalPort  uint64 `json:"localport"`
+	RemoteIp   uint64 `json:"remoteip"`
+	RemotePort uint64 `json:"remoteport"`
+}
+
 type Process struct {
-	Pid   int          `json:"pid"`
-	Ppid  int          `json:"ppid"`
-	Name  string       `json:"name"`
-	State string       `json:"state"`
-	Mem   *ProcMemStat `json:"mem"`
-	Cpu   *ProcCpuTime `json:"cpu"`
-	ctime time.Time
+	Pid         int              `json:"pid"`
+	Ppid        int              `json:"ppid"`
+	Name        string           `json:"name"`
+	State       string           `json:"state"`
+	Mem         *ProcMemStat     `json:"mem"`
+	Cpu         *ProcCpuTime     `json:"cpu"`
+	Connections *ProcConnections `json:"connections"`
+	ctime       time.Time
 }
 
 type FileSystemStat struct {
@@ -82,8 +90,8 @@ func (f *FileSystemStat) String() string {
 
 func (p *Process) String() string {
 
-	return fmt.Sprintf("pid: %d, ppid: %d, name: %s, state: %s, mem: %s, cpu: %s",
-		p.Pid, p.Ppid, p.Name, p.State, p.Mem.String(), p.Cpu.String())
+	return fmt.Sprintf("pid: %d, ppid: %d, name: %s, state: %s, mem: %s, cpu: %s, connections: %s",
+		p.Pid, p.Ppid, p.Name, p.State, p.Mem.String(), p.Cpu.String(), p.Connections.String())
 }
 
 func (m *ProcMemStat) String() string {
@@ -93,6 +101,11 @@ func (m *ProcMemStat) String() string {
 
 func (t *ProcCpuTime) String() string {
 	return fmt.Sprintf("started at %s, %d total %.2f%%CPU, %d us, %d sys", t.Start, t.Total, t.UserPercent, t.User, t.System)
+
+}
+
+func (c *ProcConnections) String() string {
+	return fmt.Sprintf("%d localip, %d localport, %d remoteip, %d remoteport", c.LocalIp, c.LocalPort, c.RemoteIp, c.RemotePort)
 
 }
 
@@ -270,6 +283,12 @@ func GetProcess(pid int) (*Process, error) {
 			Total:  cpu.Total,
 			User:   cpu.User,
 			System: cpu.Sys,
+		},
+		Connections: &ProcConnections{
+			LocalIp:    1,
+			LocalPort:  2,
+			RemoteIp:   3,
+			RemotePort: 4,
 		},
 	}
 	proc.ctime = time.Now()

@@ -62,6 +62,7 @@ func (tb *Topbeat) Config(b *beat.Beat) error {
 	} else {
 		tb.sysStats = true
 	}
+
 	if tb.TbConfig.Input.Stats.Proc != nil {
 		tb.procStats = *tb.TbConfig.Input.Stats.Proc
 	} else {
@@ -197,6 +198,7 @@ func (t *Topbeat) exportProcStats() error {
 
 			t.addProcCpuPercentage(process)
 			t.addProcMemPercentage(process, 0 /*read total mem usage */)
+			t.addProcConnections(process)
 
 			newProcs[process.Pid] = process
 
@@ -204,13 +206,13 @@ func (t *Topbeat) exportProcStats() error {
 				"@timestamp": common.Time(time.Now()),
 				"type":       "process",
 				"proc": common.MapStr{
-					"pid":   process.Pid,
-					"ppid":  process.Ppid,
-					"name":  process.Name,
-					"state": process.State,
-					"mem":   process.Mem,
-					"cpu":   process.Cpu,
-					"aa":    1,
+					"pid":         process.Pid,
+					"ppid":        process.Ppid,
+					"name":        process.Name,
+					"state":       process.State,
+					"mem":         process.Mem,
+					"cpu":         process.Cpu,
+					"connections": process.Connections,
 				},
 			}
 			t.events.PublishEvent(event)
@@ -402,6 +404,13 @@ func (t *Topbeat) addProcMemPercentage(proc *Process, total_phymem uint64) {
 	perc := (float64(proc.Mem.Rss) / float64(total_phymem))
 
 	proc.Mem.RssPercent = Round(perc, .5, 2)
+}
+
+func (t *Topbeat) addProcConnections(proc *Process) {
+	proc.Connections.LocalIp = 1
+	proc.Connections.LocalPort = 2
+	proc.Connections.RemoteIp = 3
+	proc.Connections.RemotePort = 4
 }
 
 func (t *Topbeat) addProcCpuPercentage(proc *Process) {
