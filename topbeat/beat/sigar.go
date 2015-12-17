@@ -2,6 +2,9 @@ package beat
 
 import (
 	"fmt"
+	"io/ioutil"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/elastic/gosigar"
@@ -51,11 +54,15 @@ type ProcCpuTime struct {
 	Start       string  `json:"start_time"`
 }
 
+type ProcConnection struct {
+	LocalIp    string `json:"localip"`
+	LocalPort  string `json:"localport"`
+	RemoteIp   string `json:"remoteip"`
+	RemotePort string `json:"remoteport"`
+}
+
 type ProcConnections struct {
-	LocalIp    uint64 `json:"localip"`
-	LocalPort  uint64 `json:"localport"`
-	RemoteIp   uint64 `json:"remoteip"`
-	RemotePort uint64 `json:"remoteport"`
+	Connections []ProcConnection `json:"connections"`
 }
 
 type Process struct {
@@ -105,7 +112,11 @@ func (t *ProcCpuTime) String() string {
 }
 
 func (c *ProcConnections) String() string {
-	return fmt.Sprintf("%d localip, %d localport, %d remoteip, %d remoteport", c.LocalIp, c.LocalPort, c.RemoteIp, c.RemotePort)
+	ret := ""
+	for _, conn := range c.Connections {
+		ret += fmt.Sprintf("%d localip, %d localport, %d remoteip, %d remoteport", conn.LocalIp, conn.LocalPort, conn.RemoteIp, conn.RemotePort)
+	}
+	return ret
 
 }
 
@@ -285,10 +296,7 @@ func GetProcess(pid int) (*Process, error) {
 			System: cpu.Sys,
 		},
 		Connections: &ProcConnections{
-			LocalIp:    1,
-			LocalPort:  2,
-			RemoteIp:   3,
-			RemotePort: 4,
+			Connections: nil,
 		},
 	}
 	proc.ctime = time.Now()
@@ -327,4 +335,33 @@ func GetFileSystemStat(fs sigar.FileSystem) (*FileSystemStat, error) {
 	}
 
 	return &filesystem, nil
+}
+
+func GetProcessTCPConnections(pid int) []ProcConnection {
+
+	filename := string("/proc/" + strconv.Itoa(pid) + "/net/tcp")
+
+	connection_array := []ProcConnection{}
+	dat, _ := ioutil.ReadFile(filename)
+
+	lines := strings.Split(string(dat), "\n")
+
+	for _, line := range lines[1:] {
+
+		// split by space
+		columns := strings.Split(line, " ")
+
+		if len(columns) > 5 {
+			local_ip_port := strings.Split(columns[4], ":")
+			remote_ip_port := strings.Split(columns[5], ":")
+			connection_array = append(connection_array,
+				ProcConnection{
+					LocalIp:    local_ip_port[0],
+					LocalPort:  local_ip_port[1],
+					RemoteIp:   remote_ip_port[0],
+					RemotePort: remote_ip_port[1]})
+		}
+	}
+
+	return connection_array
 }

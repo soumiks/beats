@@ -407,10 +407,8 @@ func (t *Topbeat) addProcMemPercentage(proc *Process, total_phymem uint64) {
 }
 
 func (t *Topbeat) addProcConnections(proc *Process) {
-	proc.Connections.LocalIp = 1
-	proc.Connections.LocalPort = 2
-	proc.Connections.RemoteIp = 3
-	proc.Connections.RemotePort = 4
+	// Get the pid from proc.Pid and fill out the process structure proc.
+	proc.Connections.Connections = GetProcessTCPConnections(proc.Pid)
 }
 
 func (t *Topbeat) addProcCpuPercentage(proc *Process) {
