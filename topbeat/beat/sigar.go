@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/elastic/beats/libbeat/logp"
 	"github.com/elastic/gosigar"
 )
 
@@ -339,7 +340,8 @@ func GetFileSystemStat(fs sigar.FileSystem) (*FileSystemStat, error) {
 
 func GetProcessTCPConnections(pid int) []ProcConnection {
 
-	filename := string("/proc/" + strconv.Itoa(pid) + "/net/tcp")
+	filename := "/proc/" + strconv.Itoa(pid) + "/net/tcp"
+	logp.Debug("topbeat", "GetProcessTCPConnections %s\n", filename)
 
 	connection_array := []ProcConnection{}
 	dat, _ := ioutil.ReadFile(filename)
@@ -352,14 +354,23 @@ func GetProcessTCPConnections(pid int) []ProcConnection {
 		columns := strings.Split(line, " ")
 
 		if len(columns) > 5 {
+			tempconnection := ProcConnection{"", "", "", ""}
 			local_ip_port := strings.Split(columns[4], ":")
+			if len(local_ip_port) > 0 {
+				tempconnection.LocalIp = local_ip_port[0]
+			}
+			if len(local_ip_port) > 1 {
+				tempconnection.LocalPort = local_ip_port[1]
+			}
 			remote_ip_port := strings.Split(columns[5], ":")
-			connection_array = append(connection_array,
-				ProcConnection{
-					LocalIp:    local_ip_port[0],
-					LocalPort:  local_ip_port[1],
-					RemoteIp:   remote_ip_port[0],
-					RemotePort: remote_ip_port[1]})
+			if len(remote_ip_port) > 0 {
+				tempconnection.RemoteIp = remote_ip_port[0]
+			}
+			if len(remote_ip_port) > 1 {
+				tempconnection.RemotePort = remote_ip_port[1]
+			}
+
+			connection_array = append(connection_array, tempconnection)
 		}
 	}
 

@@ -408,6 +408,8 @@ func (t *Topbeat) addProcMemPercentage(proc *Process, total_phymem uint64) {
 
 func (t *Topbeat) addProcConnections(proc *Process) {
 	// Get the pid from proc.Pid and fill out the process structure proc.
+	logp.Debug("topbeat", "addProcConnections proc.Pid = %d", proc.Pid)
+
 	proc.Connections.Connections = GetProcessTCPConnections(proc.Pid)
 }
 
