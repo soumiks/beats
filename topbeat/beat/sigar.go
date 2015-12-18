@@ -2,7 +2,7 @@ package beat
 
 import (
 	"fmt"
-	// "io/ioutil"
+	"io/ioutil"
 	"strconv"
 	// "strings"
 	"time"
@@ -71,6 +71,7 @@ type Process struct {
 	Pid         int              `json:"pid"`
 	Ppid        int              `json:"ppid"`
 	Name        string           `json:"name"`
+	CmdLine     string           `json:"cmdline"`
 	State       string           `json:"state"`
 	Mem         *ProcMemStat     `json:"mem"`
 	Cpu         *ProcCpuTime     `json:"cpu"`
@@ -99,8 +100,8 @@ func (f *FileSystemStat) String() string {
 
 func (p *Process) String() string {
 
-	return fmt.Sprintf("pid: %d, ppid: %d, name: %s, state: %s, mem: %s, cpu: %s, connections: %s",
-		p.Pid, p.Ppid, p.Name, p.State, p.Mem.String(), p.Cpu.String(), p.Connections.String())
+	return fmt.Sprintf("pid: %d, ppid: %d, name: %s, cmdline: %s, state: %s, mem: %s, cpu: %s, connections: %s",
+		p.Pid, p.Ppid, p.Name, p.CmdLine, p.State, p.Mem.String(), p.Cpu.String(), p.Connections.String())
 }
 
 func (m *ProcMemStat) String() string {
@@ -339,17 +340,6 @@ func GetFileSystemStat(fs sigar.FileSystem) (*FileSystemStat, error) {
 	return &filesystem, nil
 }
 
-func removeEmpty(array []string) []string {
-	// remove empty data from line
-	var new_array []string
-	for _, i := range array {
-		if i != "" {
-			new_array = append(new_array, i)
-		}
-	}
-	return new_array
-}
-
 func GetProcessTCPConnections(pid int) []ProcConnection {
 	d := GOnetstat.Tcp()
 	connection_array := []ProcConnection{}
@@ -364,4 +354,10 @@ func GetProcessTCPConnections(pid int) []ProcConnection {
 		}
 	}
 	return connection_array
+}
+
+func GetProcessCmdLine(pid int) string {
+	cmdline := fmt.Sprintf("/proc/%d/cmdline", pid)
+	data, _ := ioutil.ReadFile(cmdline)
+	return string(data)
 }

@@ -199,6 +199,7 @@ func (t *Topbeat) exportProcStats() error {
 			t.addProcCpuPercentage(process)
 			t.addProcMemPercentage(process, 0 /*read total mem usage */)
 			t.addProcConnections(process)
+			t.addProcCmdLine(process)
 
 			newProcs[process.Pid] = process
 
@@ -209,6 +210,7 @@ func (t *Topbeat) exportProcStats() error {
 					"pid":         process.Pid,
 					"ppid":        process.Ppid,
 					"name":        process.Name,
+					"cmdline":     process.CmdLine,
 					"state":       process.State,
 					"mem":         process.Mem,
 					"cpu":         process.Cpu,
@@ -410,6 +412,10 @@ func (t *Topbeat) addProcConnections(proc *Process) {
 	// Get the pid from proc.Pid and fill out the process structure proc.
 	logp.Debug("topbeat", "addProcConnections proc.Pid = %d", proc.Pid)
 	proc.Connections.Connections = GetProcessTCPConnections(proc.Pid)
+}
+
+func (t *Topbeat) addProcCmdLine(proc *Process) {
+	proc.CmdLine = GetProcessCmdLine(proc.Pid)
 }
 
 func (t *Topbeat) addProcCpuPercentage(proc *Process) {
