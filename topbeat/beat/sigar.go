@@ -2,13 +2,14 @@ package beat
 
 import (
 	"fmt"
-	"io/ioutil"
+	// "io/ioutil"
 	"strconv"
-	"strings"
+	// "strings"
 	"time"
 
-	"github.com/elastic/beats/libbeat/logp"
+	// "github.com/elastic/beats/libbeat/logp"
 	"github.com/elastic/gosigar"
+	"github.com/soumiks/GOnetstat"
 )
 
 type SystemLoad struct {
@@ -57,9 +58,9 @@ type ProcCpuTime struct {
 
 type ProcConnection struct {
 	LocalIp    string `json:"localip"`
-	LocalPort  string `json:"localport"`
+	LocalPort  int64  `json:"localport"`
 	RemoteIp   string `json:"remoteip"`
-	RemotePort string `json:"remoteport"`
+	RemotePort int64  `json:"remoteport"`
 }
 
 type ProcConnections struct {
@@ -115,7 +116,7 @@ func (t *ProcCpuTime) String() string {
 func (c *ProcConnections) String() string {
 	ret := ""
 	for _, conn := range c.Connections {
-		ret += fmt.Sprintf("%d localip, %d localport, %d remoteip, %d remoteport", conn.LocalIp, conn.LocalPort, conn.RemoteIp, conn.RemotePort)
+		ret += fmt.Sprintf("%s localip, %d localport, %s remoteip, %d remoteport", conn.LocalIp, conn.LocalPort, conn.RemoteIp, conn.RemotePort)
 	}
 	return ret
 
@@ -338,41 +339,29 @@ func GetFileSystemStat(fs sigar.FileSystem) (*FileSystemStat, error) {
 	return &filesystem, nil
 }
 
-func GetProcessTCPConnections(pid int) []ProcConnection {
-
-	filename := "/proc/" + strconv.Itoa(pid) + "/net/tcp"
-	logp.Debug("topbeat", "GetProcessTCPConnections %s\n", filename)
-
-	connection_array := []ProcConnection{}
-	dat, _ := ioutil.ReadFile(filename)
-
-	lines := strings.Split(string(dat), "\n")
-
-	for _, line := range lines[1:] {
-
-		// split by space
-		columns := strings.Split(line, " ")
-
-		if len(columns) > 5 {
-			tempconnection := ProcConnection{"", "", "", ""}
-			local_ip_port := strings.Split(columns[4], ":")
-			if len(local_ip_port) > 0 {
-				tempconnection.LocalIp = local_ip_port[0]
-			}
-			if len(local_ip_port) > 1 {
-				tempconnection.LocalPort = local_ip_port[1]
-			}
-			remote_ip_port := strings.Split(columns[5], ":")
-			if len(remote_ip_port) > 0 {
-				tempconnection.RemoteIp = remote_ip_port[0]
-			}
-			if len(remote_ip_port) > 1 {
-				tempconnection.RemotePort = remote_ip_port[1]
-			}
-
-			connection_array = append(connection_array, tempconnection)
+func removeEmpty(array []string) []string {
+	// remove empty data from line
+	var new_array []string
+	for _, i := range array {
+		if i != "" {
+			new_array = append(new_array, i)
 		}
 	}
+	return new_array
+}
 
+func GetProcessTCPConnections(pid int) []ProcConnection {
+	d := GOnetstat.Tcp()
+	connection_array := []ProcConnection{}
+	for _, p := range d {
+
+		// Check STATE to show only Listening connections
+		if p.State == "LISTEN" || p.State == "ESTABLISHED" {
+			if p.Pid == strconv.Itoa(pid) {
+				connection_array = append(connection_array, ProcConnection{p.Ip, p.Port, p.ForeignIp, p.ForeignPort})
+
+			}
+		}
+	}
 	return connection_array
 }
